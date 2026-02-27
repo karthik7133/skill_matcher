@@ -3,6 +3,7 @@ import apiClient from '../api/client';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { User, BookOpen, MessageSquare, Briefcase, Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import ResumeUpload from '../components/ResumeUpload';
 
 const ProfileSetup: React.FC = () => {
     const { user } = useAuth();
@@ -31,6 +32,40 @@ const ProfileSetup: React.FC = () => {
         };
         if (user) fetchProfile();
     }, [user]);
+
+    const handleResumeUploadSuccess = (parsedData: any) => {
+        // Merge parsed data into existing profile
+        const newProfile = { ...profile };
+
+        if (parsedData.education) {
+            newProfile.education = parsedData.education;
+        }
+
+        if (parsedData.skills && parsedData.skills.length > 0) {
+            // Merge skills avoiding duplicates
+            const existingSkillNames = new Set(newProfile.skills.map((s: any) => s.name.toLowerCase()));
+            parsedData.skills.forEach((newSkill: any) => {
+                if (!existingSkillNames.has(newSkill.name.toLowerCase())) {
+                    newProfile.skills.push(newSkill);
+                }
+            });
+        }
+
+        if (parsedData.projects && parsedData.projects.length > 0) {
+            // Add unique projects from resume
+            parsedData.projects.forEach((newProject: any) => {
+                if (!newProfile.projects.some((p: any) => p.title.toLowerCase() === newProject.title.toLowerCase())) {
+                    newProfile.projects.push(newProject);
+                }
+            });
+        }
+
+        if (parsedData.rawText) {
+            newProfile.resumeText = parsedData.rawText;
+        }
+
+        setProfile(newProfile);
+    };
 
     const handleSave = async () => {
         setSaving(true);
@@ -90,6 +125,9 @@ const ProfileSetup: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {user?.role === 'student' && (
+                        <ResumeUpload onUploadSuccess={handleResumeUploadSuccess} />
+                    )}
                     {/* Basic Info */}
                     <section className="auth-card" style={{ maxWidth: 'none' }}>
                         <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

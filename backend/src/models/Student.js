@@ -18,7 +18,8 @@ const StudentSchema = new mongoose.Schema({
     }],
     projects: [{
         title: String,
-        description: String
+        description: String,
+        technologies: [String]
     }],
     certifications: [String],
     resumeText: String,

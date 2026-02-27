@@ -1,0 +1,140 @@
+/**
+ * Resume Parser Service — AI-Powered with Google Gemini
+ * Tries multiple Gemini models and falls back to a robust local parser.
+ */
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// Models to try in order (confirmed available for this API key)
+const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
+
+/**
+ * Extracts raw text from a PDF buffer.
+ */
+const extractTextFromBuffer = async (buffer) => {
+    const pdfParse = require('pdf-parse');
+    try {
+        const data = await pdfParse(buffer);
+        return data.text;
+    } catch (error) {
+        console.error('[ResumeParser] PDF extraction error:', error.message);
+        throw new Error(`Failed to extract text from PDF: ${error.message}`);
+    }
+};
+
+/**
+ * Build the AI prompt.
+ */
+const buildPrompt = (text) => `You are an expert resume parser. Extract the following from the resume text and return ONLY a valid JSON object.
+
+Format:
+{
+  "education": "degree – institution (year)",
+  "skills": [{ "name": "skill", "level": "Beginner|Intermediate|Advanced" }],
+  "projects": [{ "title": "name", "description": "2-3 sentences", "technologies": [] }]
+}
+
+Rules:
+1. Group all bullet points under one project title.
+2. Extract all technologies mentioned in each project.
+3. Infer skill levels (Advanced if expert/2+ yrs mentioned).
+
+Resume:
+${text}`;
+
+const callGemini = async (modelName, text, apiKey) => {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: modelName });
+    const result = await model.generateContent(buildPrompt(text));
+    return result.response.text().trim();
+};
+
+/**
+ * Main parser.
+ */
+const parseResumeText = async (text) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (apiKey) {
+        for (const modelName of GEMINI_MODELS) {
+            try {
+                const rawResponse = await callGemini(modelName, text, apiKey);
+                const cleaned = rawResponse.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+                const parsed = JSON.parse(cleaned);
+
+                return {
+                    education: parsed.education || '',
+                    skills: (parsed.skills || []).map(s => ({ name: String(s.name), level: s.level || 'Intermediate' })),
+                    projects: (parsed.projects || []).map(p => ({ title: p.title, description: p.description, technologies: p.technologies || [] })),
+                    rawText: text
+                };
+            } catch (err) {
+                console.warn(`[ResumeParser] ${modelName} failed: ${err.message}`);
+                continue;
+            }
+        }
+    }
+
+    return localParse(text);
+};
+
+// --- Local Fallback ---
+const SECTION_RE = /^(education|experience|projects?|skills|certifications|awards|summary)$/i;
+
+const localParse = (text) => {
+    const lines = text.split('\n');
+    const sections = {};
+    let cur = null;
+
+    for (const raw of lines) {
+        const l = raw.trim();
+        if (!l) continue;
+        if (SECTION_RE.test(l)) {
+            cur = l.toLowerCase();
+            sections[cur] = [];
+        } else if (cur) {
+            sections[cur].push(l);
+        }
+    }
+
+    const KNOWN_SKILLS = [
+        'JavaScript', 'TypeScript', 'React', 'Node.js', 'Express', 'MongoDB', 'Python', 'Java', 'C++', 'C#',
+        'Flutter', 'MySQL', 'Firebase', 'AWS', 'Docker', 'Machine Learning', 'AI', 'Tailwind', 'Git'
+    ];
+
+    const skills = [];
+    const skillSource = (sections['skills'] || []).join(' ') + ' ' + text;
+
+    KNOWN_SKILLS.forEach(sk => {
+        // ESCAPE SPECIAL CHARS FOR REGEX SAFETY
+        const escaped = sk.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        if (new RegExp(`\\b${escaped}\\b`, 'i').test(skillSource)) {
+            skills.push({ name: sk, level: 'Intermediate' });
+        }
+    });
+
+    const projects = extractProjects(sections['projects'] || sections['experience'] || []);
+
+    return {
+        education: (sections['education'] || []).slice(0, 2).join(' | '),
+        skills,
+        projects,
+        rawText: text
+    };
+};
+
+const extractProjects = (lines) => {
+    const res = [];
+    let p = null;
+    for (const l of lines) {
+        if (/^[•\-\*]/.test(l)) {
+            if (p) p.description += ' ' + l.replace(/^[•\-\*]\s*/, '');
+        } else if (l.length > 3) {
+            if (p) res.push(p);
+            p = { title: l.replace(/Project Link.*/i, '').trim(), description: '', technologies: [] };
+        }
+    }
+    if (p) res.push(p);
+    return res.filter(x => x.title.length > 2);
+};
+
+module.exports = { extractTextFromBuffer, parseResumeText };
