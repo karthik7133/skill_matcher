@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../api/client';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
-import { User, BookOpen, MessageSquare, Briefcase, Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import { User, BookOpen, MessageSquare, Briefcase, Plus, Trash2, Save, Loader2, Sparkles, Code } from 'lucide-react';
 import ResumeUpload from '../components/ResumeUpload';
+import ProfileHeader from '../components/ProfileHeader';
+import GlassCard from '../components/GlassCard';
+import SkillCard from '../components/SkillCard';
+import ProjectCard from '../components/ProjectCard';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ProfileSetup: React.FC = () => {
     const { user } = useAuth();
@@ -100,152 +105,203 @@ const ProfileSetup: React.FC = () => {
         setProfile({ ...profile, projects: [...profile.projects, { title: '', description: '' }] });
     };
 
-    const updateProject = (index: number, field: string, value: string) => {
-        const newProjects = [...profile.projects];
-        newProjects[index] = { ...newProjects[index], [field]: value };
-        setProfile({ ...profile, projects: newProjects });
-    };
 
     if (loading) return <div className="loading-screen"><Loader2 className="spinner" /></div>;
     if (!profile) return <div className="loading-screen">Could not load profile. Please refresh.</div>;
 
     return (
-        <div style={{ background: 'var(--bg-dark)', minHeight: '100vh' }}>
+        <div className="min-h-screen">
             <Navbar />
 
-            <main style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-                    <header>
-                        <h1 style={{ fontSize: '2.25rem', marginBottom: '0.5rem' }}>Profile Settings</h1>
-                        <p style={{ color: 'var(--text-muted)' }}>Complete your profile to improve your match accuracy.</p>
-                    </header>
-                    <button onClick={handleSave} className="btn-primary" disabled={saving} style={{ width: 'auto', padding: '0.75rem 2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        {saving ? <Loader2 className="spinner" size={20} /> : <Save size={20} />} Save Changes
-                    </button>
+            <main className="max-w-5xl mx-auto px-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+                    <div className="flex-1 w-full">
+                        <ProfileHeader
+                            name={user?.name || ''}
+                            education={profile.education}
+                            email={user?.email}
+                            role={user?.role || 'Student'}
+                        />
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div className="grid grid-cols-1 gap-8">
+                    {/* Header Action / Save Button Floating or Top? 
+                        Let's put a premium sticky save bar or just a nice top action */}
+                    <div className="flex justify-end mb-4">
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={handleSave}
+                            className="bg-primary-600 hover:bg-primary-500 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-3 shadow-lg shadow-primary-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={saving}
+                        >
+                            {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                            <span>Save Profile</span>
+                        </motion.button>
+                    </div>
+
                     {user?.role === 'student' && (
-                        <ResumeUpload onUploadSuccess={handleResumeUploadSuccess} />
+                        <div className="mb-4">
+                            <ResumeUpload onUploadSuccess={handleResumeUploadSuccess} />
+                        </div>
                     )}
+
                     {/* Basic Info */}
-                    <section className="auth-card" style={{ maxWidth: 'none' }}>
-                        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <User color="var(--primary)" size={18} /> Basic Information
+                    <GlassCard>
+                        <h2 className="text-xl font-bold mb-6 flex items-center gap-3 text-white">
+                            <User className="text-primary-400" size={20} />
+                            <span>Account Details</span>
                         </h2>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                            <div className="form-group">
-                                <label>Full Name</label>
-                                <input className="input-field" value={user?.name} disabled />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-400 ml-1">Full Name</label>
+                                <input className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-slate-300 focus:outline-none opacity-70 cursor-not-allowed" value={user?.name} disabled />
                             </div>
-                            <div className="form-group">
-                                <label>Email Address</label>
-                                <input className="input-field" value={user?.email} disabled />
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-400 ml-1">Email Address</label>
+                                <input className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-slate-300 focus:outline-none opacity-70 cursor-not-allowed" value={user?.email} disabled />
                             </div>
                         </div>
-                        {user?.role === 'student' ? (
-                            <div className="form-group">
-                                <label>Education</label>
-                                <input
-                                    className="input-field"
-                                    placeholder="e.g. BS in Computer Science, MIT"
-                                    value={profile.education || ''}
-                                    onChange={e => setProfile({ ...profile, education: e.target.value })}
-                                />
-                            </div>
-                        ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                <div className="form-group">
-                                    <label>Company Name</label>
-                                    <input className="input-field" value={profile.companyName} onChange={e => setProfile({ ...profile, companyName: e.target.value })} />
+
+                        <div className="mt-6">
+                            {user?.role === 'student' ? (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-400 ml-1">Education Summary</label>
+                                    <input
+                                        className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 transition-all outline-none"
+                                        placeholder="e.g. B.Tech in Computer Science – VIT (2025)"
+                                        value={profile.education || ''}
+                                        onChange={e => setProfile({ ...profile, education: e.target.value })}
+                                    />
                                 </div>
-                                <div className="form-group">
-                                    <label>Website URL</label>
-                                    <input className="input-field" value={profile.website || ''} onChange={e => setProfile({ ...profile, website: e.target.value })} />
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-400 ml-1">Company Name</label>
+                                        <input className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 transition-all outline-none" value={profile.companyName} onChange={e => setProfile({ ...profile, companyName: e.target.value })} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-400 ml-1">Website URL</label>
+                                        <input className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500/50 transition-all outline-none" value={profile.website || ''} onChange={e => setProfile({ ...profile, website: e.target.value })} />
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                    </section>
+                            )}
+                        </div>
+                    </GlassCard>
 
                     {user?.role === 'student' && (
                         <>
-                            {/* Skills */}
-                            <section className="auth-card" style={{ maxWidth: 'none' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                    <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <Briefcase color="var(--accent)" size={18} /> My Skills
+                            {/* Skills Section */}
+                            <section className="space-y-6">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                                        <Sparkles className="text-primary-400" size={24} />
+                                        <span>Expertise & Skills</span>
                                     </h2>
-                                    <button onClick={addSkill} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                                        <Plus size={18} /> Add Skill
-                                    </button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={addSkill}
+                                        className="bg-white/5 border border-white/10 text-primary-400 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-white/10 transition-all shadow-lg shadow-black/20"
+                                    >
+                                        <Plus size={18} /> Add New Skill
+                                    </motion.button>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {profile.skills.map((skill: any, idx: number) => (
-                                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 150px 50px', gap: '1rem' }}>
-                                            <input className="input-field" placeholder="Skill name" value={skill.name} onChange={e => updateSkill(idx, 'name', e.target.value)} />
-                                            <select className="input-field" value={skill.level} onChange={e => updateSkill(idx, 'level', e.target.value)}>
-                                                <option value="Beginner">Beginner</option>
-                                                <option value="Intermediate">Intermediate</option>
-                                                <option value="Advanced">Advanced</option>
-                                            </select>
-                                            <button onClick={() => removeSkill(idx)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}><Trash2 size={20} /></button>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <AnimatePresence mode="popLayout">
+                                        {profile.skills.map((skill: any, idx: number) => (
+                                            <div key={idx}>
+                                                <SkillCard
+                                                    name={skill.name}
+                                                    level={skill.level}
+                                                    onRemove={() => removeSkill(idx)}
+                                                    onUpdate={(field, val) => updateSkill(idx, field, val)}
+                                                />
+                                            </div>
+                                        ))}
+                                    </AnimatePresence>
+                                </div>
+
+                                {profile.skills.length === 0 && (
+                                    <GlassCard className="text-center py-12 border-dashed border-2 border-white/5">
+                                        <div className="flex flex-col items-center gap-3 text-slate-500">
+                                            <Briefcase size={40} className="mb-2 opacity-20" />
+                                            <p className="font-medium">No skills added yet.</p>
+                                            <p className="text-sm">Upload your resume or add skills manually to stand out to recruiters.</p>
                                         </div>
-                                    ))}
-                                    {profile.skills.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Add some skills to get better matches.</p>}
-                                </div>
+                                    </GlassCard>
+                                )}
                             </section>
 
-                            {/* Projects */}
-                            <section className="auth-card" style={{ maxWidth: 'none' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                    <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <BookOpen color="var(--primary)" size={18} /> Projects
+                            {/* Projects Section */}
+                            <section className="space-y-6 pt-4">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                                        <BookOpen className="text-primary-400" size={24} />
+                                        <span>Featured Projects</span>
                                     </h2>
-                                    <button onClick={addProject} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={addProject}
+                                        className="bg-white/5 border border-white/10 text-primary-400 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-white/10 transition-all shadow-lg shadow-black/20"
+                                    >
                                         <Plus size={18} /> Add Project
-                                    </button>
+                                    </motion.button>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                    {profile.projects.map((project: any, idx: number) => (
-                                        <div key={idx} style={{ padding: '1.5rem', background: '#0f172a', borderRadius: '1rem', border: '1px solid var(--border)', position: 'relative' }}>
-                                            <button
-                                                onClick={() => {
-                                                    const newProjects = profile.projects.filter((_: any, i: number) => i !== idx);
-                                                    setProfile({ ...profile, projects: newProjects });
-                                                }}
-                                                style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                            <div className="form-group">
-                                                <label>Project Title</label>
-                                                <input className="input-field" placeholder="E-commerce App" value={project.title} onChange={e => updateProject(idx, 'title', e.target.value)} />
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <AnimatePresence mode="popLayout">
+                                        {profile.projects.map((project: any, idx: number) => (
+                                            <div key={idx}>
+                                                <ProjectCard
+                                                    title={project.title}
+                                                    description={project.description}
+                                                    technologies={project.technologies}
+                                                    onRemove={() => {
+                                                        const newProjects = profile.projects.filter((_: any, i: number) => i !== idx);
+                                                        setProfile({ ...profile, projects: newProjects });
+                                                    }}
+                                                    onUpdate={(field, val) => {
+                                                        const newProjects = [...profile.projects];
+                                                        newProjects[idx] = { ...newProjects[idx], [field]: val };
+                                                        setProfile({ ...profile, projects: newProjects });
+                                                    }}
+                                                />
                                             </div>
-                                            <div className="form-group" style={{ marginBottom: 0 }}>
-                                                <label>Description</label>
-                                                <textarea className="input-field" rows={2} placeholder="Briefly describe what you built..." value={project.description} onChange={e => updateProject(idx, 'description', e.target.value)} />
-                                            </div>
+                                        ))}
+                                    </AnimatePresence>
+                                </div>
+
+                                {profile.projects.length === 0 && (
+                                    <GlassCard className="text-center py-12 border-dashed border-2 border-white/5">
+                                        <div className="flex flex-col items-center gap-3 text-slate-500">
+                                            <Code size={40} className="mb-2 opacity-20" />
+                                            <p className="font-medium">Showcase your best work.</p>
+                                            <p className="text-sm text-slate-600 max-w-xs mx-auto">Projects are the best way to prove your skills to recruiters. Click the button above to start adding!</p>
                                         </div>
-                                    ))}
-                                </div>
+                                    </GlassCard>
+                                )}
                             </section>
 
-                            {/* Resume Text */}
-                            <section className="auth-card" style={{ maxWidth: 'none' }}>
-                                <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <MessageSquare color="var(--accent)" size={18} /> Resume Content
+                            {/* Resume Content (Modernized) */}
+                            <GlassCard className="mt-8 border-dashed border-primary-500/20">
+                                <h2 className="text-xl font-bold mb-6 flex items-center gap-3 text-white">
+                                    <MessageSquare className="text-primary-400" size={20} />
+                                    <span>AI Resume Context</span>
                                 </h2>
-                                <div className="form-group">
-                                    <label>Paste your resume text here for AI scanning</label>
+                                <div className="space-y-3">
+                                    <p className="text-xs text-slate-400 ml-1">Your raw resume text helps our AI find the best internship matches for you.</p>
                                     <textarea
-                                        className="input-field"
-                                        rows={6}
-                                        placeholder="Experience, summary, skills from your PDF/Word resume..."
+                                        className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-slate-400 text-xs focus:ring-2 focus:ring-primary-500/10 focus:border-primary-500/50 transition-all outline-none min-h-[150px]"
+                                        placeholder="Experience details, summaries, etc..."
                                         value={profile.resumeText || ''}
                                         onChange={e => setProfile({ ...profile, resumeText: e.target.value })}
                                     />
                                 </div>
-                            </section>
+                            </GlassCard>
                         </>
                     )}
                 </div>

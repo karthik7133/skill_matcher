@@ -46,11 +46,15 @@ const LogoutHandler = ({ logout }: { logout: () => void }) => {
   return <Navigate to="/login" />;
 };
 
+import Layout from './components/Layout';
+
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <AppRoutes />
+        <Layout>
+          <AppRoutes />
+        </Layout>
       </Router>
     </AuthProvider>
   );
