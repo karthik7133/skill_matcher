@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     createInternship,
     getInternships,
+    getMyInternships,
     getInternshipById,
     updateInternship,
     deleteInternship
@@ -10,6 +11,7 @@ const {
 const { protect, authorize } = require('../middleware/authMiddleware');
 
 router.get('/', protect, getInternships);
+router.get('/mine', protect, authorize('recruiter', 'admin'), getMyInternships);
 router.get('/:id', protect, getInternshipById);
 router.post('/', protect, authorize('recruiter', 'admin'), createInternship);
 router.put('/:id', protect, authorize('recruiter', 'admin'), updateInternship);

@@ -12,7 +12,8 @@ exports.createInternship = async (req, res) => {
             preferredSkills,
             minGPA,
             description,
-            duration
+            duration,
+            recruiterId: req.user.id
         });
 
         const internship = await newInternship.save();
@@ -23,10 +24,21 @@ exports.createInternship = async (req, res) => {
     }
 };
 
-// Get all internships
+// Get all internships (for students)
 exports.getInternships = async (req, res) => {
     try {
         const internships = await Internship.find().sort({ createdAt: -1 });
+        res.json(internships);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// Get internships owned by this recruiter
+exports.getMyInternships = async (req, res) => {
+    try {
+        const internships = await Internship.find({ recruiterId: req.user.id }).sort({ createdAt: -1 });
         res.json(internships);
     } catch (err) {
         console.error(err.message);

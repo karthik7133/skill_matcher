@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Briefcase, User as UserIcon, LogOut, Layout, Bell, Settings } from 'lucide-react';
+import { Briefcase, User as UserIcon, LogOut, Layout } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 import { useAuth } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -76,13 +77,7 @@ const Navbar: React.FC = () => {
                     <div className="h-8 w-px bg-white/10" />
 
                     <div className="flex items-center gap-2">
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-                        >
-                            <Bell size={18} />
-                        </motion.button>
+                        <NotificationDropdown />
                         <motion.button
                             onClick={handleLogout}
                             whileHover={{ scale: 1.05 }}

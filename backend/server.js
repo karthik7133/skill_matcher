@@ -6,6 +6,12 @@ const mongoose = require('mongoose');
 dotenv.config();
 
 const app = express();
+const server = require('http').createServer(app);
+const socketService = require('./src/services/socketService');
+
+// Initialize Sockets
+socketService.init(server);
+
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
@@ -23,11 +29,12 @@ app.use('/api/recruiters', require('./src/routes/recruiterRoutes'));
 app.use('/api/internships', require('./src/routes/internshipRoutes'));
 app.use('/api/match', require('./src/routes/matchingRoutes'));
 app.use('/api/applications', require('./src/routes/applicationRoutes'));
+app.use('/api/notifications', require('./src/routes/notificationRoutes'));
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Backend server is running' });
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
