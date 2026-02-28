@@ -34,3 +34,20 @@ exports.markAsRead = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// Mark all for an internship as read
+exports.markAllAsRead = async (req, res) => {
+    try {
+        const { internshipId } = req.body;
+        const filter = { userId: req.user.id, isRead: false };
+        if (internshipId) {
+            filter.relatedInternshipId = internshipId;
+        }
+
+        await Notification.updateMany(filter, { $set: { isRead: true } });
+        res.json({ message: 'Notifications marked as read' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};

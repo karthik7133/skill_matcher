@@ -3,6 +3,7 @@ import apiClient from '../api/client';
 import MatchBadge from '../components/MatchBadge';
 import Navbar from '../components/Navbar';
 import { Clock, Brain, CheckCircle, Info, Loader2 } from 'lucide-react';
+import CareerAssistant from '../components/CareerAssistant';
 
 const StudentDashboard: React.FC = () => {
     const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -182,6 +183,7 @@ const StudentDashboard: React.FC = () => {
                     </div>
                 )}
             </main>
+            <CareerAssistant />
         </div>
     );
 };

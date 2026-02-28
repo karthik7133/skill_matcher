@@ -28,7 +28,7 @@ const ProfileSetup: React.FC = () => {
                 console.error('[ProfileSetup] Error loading profile:', err?.response?.status, err?.response?.data);
                 // Set a safe default to avoid null crash
                 setProfile(user?.role === 'student'
-                    ? { education: '', skills: [], projects: [], certifications: [], resumeText: '', availability: '' }
+                    ? { education: '', skills: [], projects: [], certifications: [], resumeText: '', availability: '', resumeAuthenticity: { aiProbability: 0, humanProbability: 0, analysisReasoning: '' } }
                     : { companyName: '', website: '' }
                 );
             } finally {
@@ -67,6 +67,10 @@ const ProfileSetup: React.FC = () => {
 
         if (parsedData.rawText) {
             newProfile.resumeText = parsedData.rawText;
+        }
+
+        if (parsedData.resumeAuthenticity) {
+            newProfile.resumeAuthenticity = parsedData.resumeAuthenticity;
         }
 
         setProfile(newProfile);

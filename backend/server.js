@@ -30,6 +30,7 @@ app.use('/api/internships', require('./src/routes/internshipRoutes'));
 app.use('/api/match', require('./src/routes/matchingRoutes'));
 app.use('/api/applications', require('./src/routes/applicationRoutes'));
 app.use('/api/notifications', require('./src/routes/notificationRoutes'));
+app.use('/api/chat', require('./src/routes/chatRoutes'));
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Backend server is running' });

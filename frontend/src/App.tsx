@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -53,11 +54,13 @@ function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <Router>
-          <Layout>
-            <AppRoutes />
-          </Layout>
-        </Router>
+        <NotificationProvider>
+          <Router>
+            <Layout>
+              <AppRoutes />
+            </Layout>
+          </Router>
+        </NotificationProvider>
       </SocketProvider>
     </AuthProvider>
   );

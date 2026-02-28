@@ -1,53 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Inbox } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import apiClient from '../api/client';
 import { formatDistanceToNow } from 'date-fns';
-import { useSocket } from '../context/SocketContext';
-
-interface Notification {
-    _id: string;
-    type: 'application_received' | 'status_updated' | 'system';
-    message: string;
-    isRead: boolean;
-    createdAt: string;
-}
+import { useNotifications } from '../context/NotificationContext';
 
 const NotificationDropdown: React.FC = () => {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const { notifications, unreadCount, markAsRead, markAllRead } = useNotifications();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-
-    const unreadCount = notifications.filter((n: Notification) => !n.isRead).length;
-
-    const fetchNotifications = async () => {
-        try {
-            const res = await apiClient.get('/notifications');
-            setNotifications(res.data);
-        } catch (err) {
-            console.error('Error fetching notifications:', err);
-        }
-    };
-
-    const { socket } = useSocket();
-
-    useEffect(() => {
-        fetchNotifications();
-    }, []);
-
-    useEffect(() => {
-        if (socket) {
-            socket.on('notification', (newNotification: Notification) => {
-                setNotifications((prev: Notification[]) => [newNotification, ...prev]);
-                // Optional: Play a subtle sound or show a toast
-                console.log('Real-time notification received:', newNotification);
-            });
-
-            return () => {
-                socket.off('notification');
-            };
-        }
-    }, [socket]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -58,22 +18,6 @@ const NotificationDropdown: React.FC = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    const markAsRead = async (id: string) => {
-        try {
-            await apiClient.put(`/notifications/${id}/read`);
-            setNotifications((prev: Notification[]) => prev.map((n: Notification) => n._id === id ? { ...n, isRead: true } : n));
-        } catch (err) {
-            console.error('Error marking as read:', err);
-        }
-    };
-
-    const markAllAsRead = async () => {
-        const unread = notifications.filter((n: Notification) => !n.isRead);
-        for (const n of unread) {
-            await markAsRead(n._id);
-        }
-    };
 
     return (
         <div className="relative" ref={dropdownRef}>
@@ -101,7 +45,7 @@ const NotificationDropdown: React.FC = () => {
                             <h3 className="text-sm font-bold text-white">Notifications</h3>
                             {unreadCount > 0 && (
                                 <button
-                                    onClick={markAllAsRead}
+                                    onClick={() => markAllRead()}
                                     className="text-[10px] font-bold text-primary-400 hover:text-primary-300 uppercase tracking-wider transition-colors"
                                 >
                                     Mark all read

@@ -4,8 +4,14 @@ import Navbar from '../components/Navbar';
 import MatchBadge from '../components/MatchBadge';
 import { Plus, Users, Briefcase, ChevronRight, X, Loader2, BarChart3, CheckCircle2, XCircle, Clock, Inbox, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import AuthenticityBadge from '../components/AuthenticityBadge';
+import AuthenticityStatusBar from '../components/AuthenticityStatusBar';
+import { useNotifications } from '../context/NotificationContext';
 
 const RecruiterDashboard: React.FC = () => {
+    const { markAllRead, notifications } = useNotifications();
+    // Count only unread 'application_received' notifications for the badge
+    const unreadAppCount = notifications.filter(n => n.type === 'application_received' && !n.isRead).length;
     const [activeTab, setActiveTab] = useState<'postings' | 'applications'>('postings');
     const [internships, setInternships] = useState<any[]>([]);
     const [allApplications, setAllApplications] = useState<any[]>([]);
@@ -15,6 +21,8 @@ const RecruiterDashboard: React.FC = () => {
     const [selectedInternship, setSelectedInternship] = useState<any | null>(null);
     const [candidates, setCandidates] = useState<any[]>([]);
     const [candidateLoading, setCandidateLoading] = useState(false);
+    const [authFilter, setAuthFilter] = useState<'all' | 'human' | 'ai'>('all');
+    const [sortByAuth, setSortByAuth] = useState(false);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -93,12 +101,52 @@ const RecruiterDashboard: React.FC = () => {
         try {
             const res = await apiClient.get(`/match/candidates/${id}`);
             setCandidates(res.data);
+            markAllRead(id);
+            // Re-fetch after 8s to pick up background AI authenticity analysis
+            setTimeout(async () => {
+                try {
+                    const refreshed = await apiClient.get(`/match/candidates/${id}`);
+                    setCandidates(refreshed.data);
+                } catch (_) { /* fail silently */ }
+            }, 8000);
         } catch (err: any) {
             console.error('[RecruiterDashboard] Candidates error:', err.response?.data || err.message);
             setCandidates([]);
         } finally {
             setCandidateLoading(false);
         }
+    };
+
+    const getFilteredCandidates = (items: any[]) => {
+        let filtered = [...items];
+
+        if (authFilter === 'human') {
+            filtered = filtered.filter(c => (c.student?.resumeAuthenticity?.humanProbability || 0) > 70);
+        } else if (authFilter === 'ai') {
+            filtered = filtered.filter(c => (c.student?.resumeAuthenticity?.aiProbability || 0) > 70);
+        }
+
+        if (sortByAuth) {
+            filtered.sort((a, b) => (b.student?.resumeAuthenticity?.humanProbability || 0) - (a.student?.resumeAuthenticity?.humanProbability || 0));
+        }
+
+        return filtered;
+    };
+
+    const getFilteredApplications = (items: any[]) => {
+        let filtered = [...items];
+
+        if (authFilter === 'human') {
+            filtered = filtered.filter(app => (app.studentId?.resumeAuthenticity?.humanProbability || 0) > 70);
+        } else if (authFilter === 'ai') {
+            filtered = filtered.filter(app => (app.studentId?.resumeAuthenticity?.aiProbability || 0) > 70);
+        }
+
+        if (sortByAuth) {
+            filtered.sort((a, b) => (b.studentId?.resumeAuthenticity?.humanProbability || 0) - (a.studentId?.resumeAuthenticity?.humanProbability || 0));
+        }
+
+        return filtered;
     };
 
     if (loading) {
@@ -131,15 +179,37 @@ const RecruiterDashboard: React.FC = () => {
                             My Postings
                         </button>
                         <button
-                            onClick={() => { setActiveTab('applications'); fetchAllApplications(); }}
+                            onClick={() => { setActiveTab('applications'); fetchAllApplications(); markAllRead(); }}
                             className={`relative px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'applications' ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20' : 'text-slate-400 hover:text-white'}`}
                         >
                             Applicant Requests
-                            {allApplications.filter(a => a.status === 'applied').length > 0 && (
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full text-[10px] font-black text-white flex items-center justify-center">
-                                    {allApplications.filter(a => a.status === 'applied').length}
+                            {unreadAppCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full text-[10px] font-black text-white flex items-center justify-center animate-pulse">
+                                    {unreadAppCount}
                                 </span>
                             )}
+                        </button>
+                    </div>
+
+                    {/* Filter Controls */}
+                    <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-2 rounded-2xl">
+                        <div className="flex items-center gap-2 px-3 py-1 border-r border-white/10">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Trust Filter:</span>
+                            <select
+                                value={authFilter}
+                                onChange={(e) => setAuthFilter(e.target.value as any)}
+                                className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
+                            >
+                                <option value="all" className="bg-slate-900">All</option>
+                                <option value="human" className="bg-slate-900 text-emerald-400">Likely Human</option>
+                                <option value="ai" className="bg-slate-900 text-rose-400">High AI Prob</option>
+                            </select>
+                        </div>
+                        <button
+                            onClick={() => setSortByAuth(!sortByAuth)}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-xl transition-all ${sortByAuth ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30' : 'text-slate-500 hover:text-white'}`}
+                        >
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Sort by Authenticity</span>
                         </button>
                     </div>
                 </header>
@@ -169,7 +239,21 @@ const RecruiterDashboard: React.FC = () => {
                                 </div>
 
                                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-1">
-                                    {internships.map(internship => (
+                                    {loading ? (
+                                        // Skeleton placeholders
+                                        Array.from({ length: 3 }).map((_, i) => (
+                                            <div key={i} className="glass-dark p-5 rounded-2xl border border-white/5 animate-pulse">
+                                                <div className="flex justify-between">
+                                                    <div className="flex-1">
+                                                        <div className="h-5 bg-white/5 rounded-full w-3/4 mb-2" />
+                                                        <div className="h-3 bg-white/5 rounded-full w-1/2 mb-1" />
+                                                        <div className="h-3 bg-white/5 rounded-full w-1/3" />
+                                                    </div>
+                                                    <div className="h-5 w-5 bg-white/5 rounded-full" />
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : internships.map(internship => (
                                         <motion.div
                                             key={internship._id}
                                             whileHover={{ scale: 1.02 }}
@@ -214,7 +298,7 @@ const RecruiterDashboard: React.FC = () => {
                                         </div>
                                     ) : (
                                         <div className="grid gap-6">
-                                            {candidates.map((candidate: any) => (
+                                            {getFilteredCandidates(candidates).map((candidate: any) => (
                                                 <div key={candidate.student?._id} className="glass-dark p-6 rounded-3xl border border-white/5 hover:border-white/10 transition-all">
                                                     <div className="flex flex-col md:flex-row justify-between gap-6 mb-6">
                                                         <div className="flex gap-4">
@@ -229,7 +313,10 @@ const RecruiterDashboard: React.FC = () => {
                                                         <div className="flex items-center gap-4">
                                                             <div className="text-right hidden sm:block">
                                                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">AI MATCH SCORE</p>
-                                                                <MatchBadge score={candidate.matchScore} size="lg" />
+                                                                <div className="flex flex-col items-end gap-2">
+                                                                    <MatchBadge score={candidate.matchScore} size="lg" />
+                                                                    <AuthenticityBadge data={candidate.student?.resumeAuthenticity} />
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -241,6 +328,10 @@ const RecruiterDashboard: React.FC = () => {
                                                                 <span className="text-sm font-bold text-white">Match Intelligence</span>
                                                             </div>
                                                             <p className="text-sm text-slate-300 leading-relaxed italic">"{candidate.explanation}"</p>
+                                                            <AuthenticityStatusBar
+                                                                data={candidate.student?.resumeAuthenticity}
+                                                                hasResumeText={!!(candidate.student?.resumeText)}
+                                                            />
                                                         </div>
                                                     )}
 
@@ -291,7 +382,7 @@ const RecruiterDashboard: React.FC = () => {
                                     <p className="text-slate-500 mt-2">When students apply to your postings, they'll appear here.</p>
                                 </div>
                             ) : (
-                                allApplications.map(app => {
+                                getFilteredApplications(allApplications).map(app => {
                                     // Safe access with optional chaining
                                     const studentName = app.studentId?.userId?.name ?? 'Unknown Student';
                                     const studentEmail = app.studentId?.userId?.email ?? '';
@@ -333,6 +424,8 @@ const RecruiterDashboard: React.FC = () => {
                                                                     <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Match Score</span>
                                                                     <MatchBadge score={app.score} size="sm" />
                                                                 </div>
+                                                                <div className="w-1 h-1 rounded-full bg-slate-700" />
+                                                                <AuthenticityBadge data={app.studentId?.resumeAuthenticity} />
                                                             </>
                                                         )}
                                                     </div>

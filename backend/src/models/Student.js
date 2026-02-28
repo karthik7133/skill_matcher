@@ -23,7 +23,12 @@ const StudentSchema = new mongoose.Schema({
     }],
     certifications: [String],
     resumeText: String,
-    availability: String
+    availability: String,
+    resumeAuthenticity: {
+        aiProbability: { type: Number, default: 0 },
+        humanProbability: { type: Number, default: 0 },
+        analysisReasoning: { type: String, default: '' }
+    }
 });
 
 module.exports = mongoose.model('Student', StudentSchema);

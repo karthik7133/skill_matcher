@@ -38,7 +38,7 @@ exports.uploadResume = async (req, res) => {
 // Update student profile
 exports.updateProfile = async (req, res) => {
     try {
-        const { education, skills, projects, certifications, resumeText, availability } = req.body;
+        const { education, skills, projects, certifications, resumeText, availability, resumeAuthenticity } = req.body;
 
         const profileFields = {};
         if (education) profileFields.education = education;
@@ -47,6 +47,7 @@ exports.updateProfile = async (req, res) => {
         if (certifications) profileFields.certifications = certifications;
         if (resumeText) profileFields.resumeText = resumeText;
         if (availability) profileFields.availability = availability;
+        if (resumeAuthenticity) profileFields.resumeAuthenticity = resumeAuthenticity;
 
         let student = await Student.findOne({ userId: req.user.id });
 
